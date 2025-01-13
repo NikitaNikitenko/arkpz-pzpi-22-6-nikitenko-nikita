@@ -1,0 +1,614 @@
+﻿ЛАБОРАТОРНА РОБОТА №2.
+
+
+РОЗРОБКА БАЗИ ДАНИХ ДЛЯ СЕРВЕРНОЇ ЧАСТИНИ ПРОГРАМНОЇ 
+СИСТЕМИ ТА ПРИКЛАДНОГО ПРОГРАМНОГО ІНТЕРФЕЙСУ (API).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Програмна система для попередження про природні катастрофи
+Версія 1.0, затверджена 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Підготував Нікітенко Н.Ю 
+ПЗПІ-22-6 
+10.01.2025
+
+
+
+
+
+
+
+
+
+
+Перевірив роботу: 
+Сокорчук І.П
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Мета роботи: Розробка бази даних для серверної частини програмної системи та прикладного програмного інтерфейсу
+ 
+Хід роботи:
+
+
+3.1. Розробити будову програмної системи:
+
+
+Програмна система для попередження про природні катастрофи буде всеосяжною, інтегрованою платформою, яка надаватиме громадам можливість краще підготуватися, відреагувати та відновитися після впливу природних катастроф. Програмна система реалізована на TypeScript, з використанням PostgreSQL (Supabase).  Завдяки використанню передових технологій, таких як IoT-датчики, машинне навчання та багатоканальні сповіщення, система забезпечить своєчасну, точну та практичну інформацію для зменшення втрат життя, захисту критичної інфраструктури та мінімізації економічних збитків.
+
+
+3.2 Основні функції
+
+
+Ключові функції Програмної системи для попередження про природні катастрофи включають:
+
+
+Інтеграція мережі датчиків:
+Підключення та управління різноманітними датчиками IoT (сейсмічні, атмосферні, датчики рівня води) для збору актуальних даних про екологічні умови.
+
+
+Прогностична аналітика та прогнозування:
+Використання алгоритмів машинного навчання для аналізу даних датчиків, історичних записів та зовнішніх джерел інформації для формування точних прогнозів щодо ризиків природних катастроф.
+
+
+Багатоканальна система сповіщень:
+Доставка попереджень про надзвичайні ситуації через різні канали, такі як мобільні сповіщення, SMS, електронна пошта, соціальні медіа та публічні системи оповіщення.
+
+
+Ситуаційна обізнаність та підтримка прийняття рішень:
+Надання панелі моніторингу для органів влади та громадськості, яка дозволяє відстежувати поточні умови, візуалізувати прогнози та приймати обґрунтовані рішення.
+
+
+Масштабована та стійка архітектура:
+Забезпечення високої доступності, безпеки та здатності обробляти великі обсяги даних навіть під час кризових ситуацій.
+
+
+Адаптивність та локалізація:
+Можливість адаптації системи до потреб різних регіонів, включаючи підтримку кількох мов та культурних особливостей.
+
+
+
+
+3.3. Створити UML діаграму прецедентів для серверної частини:
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3.4. Створити ER діаграму даних:
+ 
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3.4. Розробити базу даних (БД) програмної системи:
+Для даної програмної системи була розроблена реляційна база даних PostgreSQL. 
+
+
+1. Створення таблиці monitored_regions
+
+
+CREATE TABLE public.monitored_regions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY NOT NULL,
+    user_id UUID NOT NULL REFERENCES auth.users(id),
+    region_name TEXT NOT NULL,
+    latitude NUMERIC NOT NULL,
+    longitude NUMERIC NOT NULL,
+    radius NUMERIC NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+
+Опис: Ця таблиця зберігає інформацію про "моніторовані регіони", які користувачі можуть створювати.
+
+
+2. Увімкнення Row Level Security (RLS)
+
+
+ALTER TABLE public.monitored_regions ENABLE ROW LEVEL SECURITY;
+
+
+Опис: RLS дозволяє обмежити доступ до рядків таблиці на основі певних умов. У цьому випадку користувачі можуть отримувати доступ лише до своїх даних.
+
+
+3. Створення політик RLS
+
+
+CREATE POLICY "Users can view their own monitored regions"
+ON public.monitored_regions
+FOR SELECT
+USING (auth.uid() = user_id);
+
+
+Опис: Користувачі можуть переглядати лише ті регіони, які вони самі створили. Умова auth.uid() = user_id перевіряє, чи ідентифікатор поточного користувача збігається з user_id у таблиці.
+
+
+b. Політика для додавання даних:
+CREATE POLICY "Users can insert their own monitored regions"
+ON public.monitored_regions
+FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+Опис: Користувачі можуть додавати нові регіони, але лише зі своїм user_id
+
+
+c. Політика для оновлення даних:
+
+
+CREATE POLICY "Users can update their own monitored regions"
+ON public.monitored_regions
+FOR UPDATE
+USING (auth.uid() = user_id);
+
+
+
+
+Опис: Користувачі можуть оновлювати лише свої регіони.
+
+
+d. Політика для видалення даних:
+
+
+CREATE POLICY "Users can delete their own monitored regions"
+ON public.monitored_regions
+FOR DELETE
+USING (auth.uid() = user_id);
+
+
+Опис: Користувачі можуть видаляти лише свої регіони.
+
+
+
+
+4. Допоміжні функції
+
+
+CREATE OR REPLACE FUNCTION public.add_monitored_region(
+    p_user_id UUID,
+    p_region_name TEXT,
+    p_latitude NUMERIC,
+    p_longitude NUMERIC,
+    p_radius NUMERIC
+) RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+DECLARE
+    new_region_id UUID;
+BEGIN
+    INSERT INTO monitored_regions (
+        user_id,
+        region_name,
+        latitude,
+        longitude,
+        radius
+    )
+    VALUES (
+        p_user_id,
+        p_region_name,
+        p_latitude,
+        p_longitude,
+        p_radius
+    )
+    RETURNING id INTO new_region_id;
+    
+    RETURN new_region_id;
+END;
+$$;
+
+
+
+
+Опис: Ця функція додає новий регіон до таблиці monitored_regions та повертає ідентифікатор нового запису.
+
+
+Використання: Викликається з клієнтського додатку або іншого SQL-запиту для додавання нового регіону.
+
+
+
+
+b. Функція для отримання регіонів користувача:
+
+
+CREATE OR REPLACE FUNCTION public.get_user_regions(user_uuid UUID)
+RETURNS TABLE (
+    id UUID,
+    region_name TEXT,
+    latitude NUMERIC,
+    longitude NUMERIC,
+    radius NUMERIC,
+    created_at TIMESTAMP WITH TIME ZONE
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        r.id,
+        r.region_name,
+        r.latitude,
+        r.longitude,
+        r.radius,
+        r.created_at
+    FROM monitored_regions r
+    WHERE r.user_id = user_uuid
+    ORDER BY r.created_at DESC;
+END;
+$$;
+
+
+
+
+Опис: Повертає список усіх регіонів, які належать певному користувачу.
+Використання: Викликається для отримання регіонів конкретного користувача.
+
+
+
+
+c. Функція для оновлення регіону:
+CREATE OR REPLACE FUNCTION public.update_monitored_region(
+    p_region_id UUID,
+    p_user_id UUID,
+    p_region_name TEXT,
+    p_latitude NUMERIC,
+    p_longitude NUMERIC,
+    p_radius NUMERIC
+) RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+BEGIN
+    UPDATE monitored_regions
+    SET 
+        region_name = p_region_name,
+        latitude = p_latitude,
+        longitude = p_longitude,
+        radius = p_radius
+    WHERE id = p_region_id AND user_id = p_user_id;
+    
+    RETURN FOUND;
+END;
+$$;
+
+
+Опис: Оновлює дані регіону, якщо він належить вказаному користувачу.
+Використання: Викликається для оновлення існуючого регіону.
+
+
+
+
+3.5 Розробити АРІ для взаємодії серверної частини з клієнтами:
+Був розроблений REST API для взаємодії серверної частини з клієнтами
+
+
+// Отримати регіони користувача
+const { data, error } = await supabase
+  .from("monitored_regions")
+  .select("*");
+
+
+// Додати новий регіон
+const { data, error } = await supabase
+  .from("monitored_regions")
+  .insert([{
+    user_id: userId,
+    region_name: regionName,
+    latitude: latitude,
+    longitude: longitude,
+    radius: radius
+  }]);
+
+
+// Оновити регіон
+const { data, error } = await supabase
+  .from("monitored_regions")
+  .update({
+    region_name: newName,
+    latitude: newLat,
+    longitude: newLong,
+    radius: newRadius
+  })
+  .eq('id', regionId);
+
+
+// Видалити регіон
+const { data, error } = await supabase
+  .from("monitored_regions")
+  .delete()
+  .eq('id', regionId);
+
+
+
+
+Інші під’єднані API:
+
+
+// USGS API для отримання даних про землетруси
+const response = await fetch(
+  `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${startTime}&latitude=${latitude}&longitude=${longitude}&maxradiuskm=${radius}`
+);
+
+
+// API якості повітря (WAQI)
+const response = await fetch(
+  `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${WAQI_API_KEY}`
+);
+
+
+// Дані про погоду (через Supabase Edge Function)
+const { data, error } = await supabase.functions.invoke('get-weather', {
+  body: { latitude, longitude }
+});
+
+
+
+
+Реалізована аутентифікація:
+
+
+// Увійти в систему
+const { data, error } = await supabase.auth.signInWithPassword({
+  email: email,
+  password: password
+});
+
+
+// Зареєструватися
+const { data, error } = await supabase.auth.signUp({
+  email: email,
+  password: password
+});
+
+
+// Вийти з системи
+const { error } = await supabase.auth.signOut();
+
+
+// Отримати поточну сесію
+const { data: { session } } = await supabase.auth.getSession();
+
+
+
+
+Функції БД:
+
+
+// Додати регіон для моніторингу
+const { data, error } = await supabase.rpc('add_monitored_region', {
+  p_user_id: userId,
+  p_region_name: regionName,
+  p_latitude: latitude,
+  p_longitude: longitude,
+  p_radius: radius
+});
+
+
+// Отримати регіони користувача
+const { data, error } = await supabase.rpc('get_user_regions', {
+  user_uuid: userId
+});
+
+
+// Оновити регіон для моніторингу
+const { data, error } = await supabase.rpc('update_monitored_region', {
+  p_region_id: regionId,
+  p_user_id: userId,
+  p_region_name: regionName,
+  p_latitude: latitude,
+  p_longitude: longitude,
+  p_radius: radius
+});
+
+
+
+
+
+
+
+
+
+
+
+
+У цьому проекті було прийнято низку рішень для забезпечення якісного проектування функціональності, пов’язаної з моніторингом про природні катастрофи. Основним принципом стало використання ресурсно-орієнтованого підходу, де кожна сутність, така як `monitored_regions`, отримала свій власний набір функцій для управління даними. 
+
+
+Для роботи з моніторованими регіонами було реалізовано наступні функції:
+
+
+1. Отримання списку регіонів для користувача: Функція `get_user_regions` повертає всі регіони, які пов’язані з конкретним користувачем, відсортовані за датою створення.
+
+
+2. Додавання нового регіону: Функція `add_monitored_region` дозволяє додавати новий регіон для моніторингу, повертаючи ідентифікатор створеного запису.
+
+
+3. Оновлення існуючого регіону: Функція `update_monitored_region` дозволяє оновлювати дані регіону, перевіряючи, чи належить він вказаному користувачу.
+
+
+Для забезпечення безпеки всі функції мають параметр `SECURITY DEFINER`, що гарантує виконання їх з правами власника функції, а також обмежений доступ через надання прав виконання лише ідентифікованим користувачам (`GRANT EXECUTE TO authenticated`).
+
+
+Цей підхід забезпечує чітку структуру та зручність у роботі з даними, дотримуючись принципів безпеки та ефективності.
+
+
+Додаток А:
+3.3. Створити UML діаграму прецедентів для серверної частини:
+
+
+  
+
+
+
+3.4. Створити ER діаграму даних:
+
+
+  
+
+
+
+Додаток Б:
+Приклади реалізованого коду на TypeScript:
+
+
+Отримання регіонів користувача:
+const { data: regions, isLoading: regionsLoading, refetch: refetchRegions } = useQuery({
+  queryKey: ["monitored-regions"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("monitored_regions")
+      .select("*");
+    if (error) throw error;
+    return data as MonitoredRegion[];
+  },
+});
+
+
+Прослуховування змін в реальному часі:
+
+
+const channel = supabase
+  .channel("schema-db-changes")
+  .on(
+    "postgres_changes",
+    {
+      event: "*",
+      schema: "public",
+      table: "monitored_regions",
+    },
+    (payload) => {
+      console.log("Real-time update:", payload);
+      refetchRegions();
+    }
+  )
+  .subscribe();
+
+
+
+
+Додавання нового регіону:
+
+
+
+
+const { error } = await supabase.from("monitored_regions").insert({
+  region_name: regionName,
+  latitude: parseFloat(latitude),
+  longitude: parseFloat(longitude),
+  radius: parseFloat(radius),
+  user_id: user.id
+});
+
+
+Видалення регіону:
+
+
+const { error } = await supabase
+  .from("monitored_regions")
+  .delete()
+  .eq("id", regionId);
