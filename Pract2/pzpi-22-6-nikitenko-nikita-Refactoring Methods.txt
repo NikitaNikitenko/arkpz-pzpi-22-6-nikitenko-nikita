@@ -1,6 +1,5 @@
 ﻿ПРАКТИЧНА РОБОТА №2. 
-
-РОЗРОБКА Refactoring Methods (Ruby)
+Refactoring Methods (Ruby)
 
 Підготував 
 ст. Нікітенко Н.Ю 
