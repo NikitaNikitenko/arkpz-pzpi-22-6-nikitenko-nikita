@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Monitor - Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2575fc;
+            --secondary-color: #6a11cb;
+            --background-gradient: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            --text-color: #333;
+            --input-border-color: #e0e0e0;
+            --notification-bg: #333;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--background-gradient);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            color: var(--text-color);
+            perspective: 1000px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 400px;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            transform-style: preserve-3d;
+        }
+        .container:hover {
+            transform: rotateY(10deg) scale(1.02);
+            box-shadow: 0 30px 50px rgba(0,0,0,0.15);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: var(--background-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .logo:hover {
+            transform: scale(1.1) rotate(-5deg);
+        }
+        .form-switch {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .form-switch button {
+            background: none;
+            border: none;
+            font-size: 1rem;
+            margin: 0 15px;
+            color: #888;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .form-switch button:hover {
+            transform: translateY(-3px);
+            color: var(--primary-color);
+        }
+        .form-switch button.active {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        .form-switch button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--primary-color);
+        }
+        .form-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px 12px 40px;
+            border: 1px solid var(--input-border-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(37, 117, 252, 0.1);
+            transform: scale(1.01);
+        }
+        .form-group input:hover {
+            background-color: #f9f9f9;
+        }
+        .form-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+            transition: color 0.3s ease;
+        }
+        .form-group input:focus + i {
+            color: var(--primary-color);
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--background-gradient);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(37, 117, 252, 0.2);
+        }
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: all 0.5s ease;
+        }
+        .submit-btn:hover::before {
+            left: 100%;
+        }
+        .form-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+        .form-footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .form-footer a:hover {
+            color: var(--secondary-color);
+            text-decoration: underline;
+        }
+        .notifications {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .notification {
+            background-color: var(--notification-bg);
+            color: #fff;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .notification p {
+            margin: 0;
+            flex: 1;
+        }
+        .notification .close-btn {
+            margin-left: 10px;
+            cursor: pointer;
+        }
+        @media (max-width: 768px) {
+            .container {
+                width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">DisasterMonitor</div>
+        
+        <div class="form-switch">
+            <button id="loginTab" class="active">Login</button>
+            <button id="registerTab">Register</button>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <i class="fas fa-user"></i>
+                <input type="text" id="loginUsername" placeholder="Username" required>
+            </div>
+            <div class="form-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="loginPassword" placeholder="Password" required>
+            </div>
+            <button type="submit" class="submit-btn">Login</button>
+            <div class="form-footer">
+                <a href="#">Forgot password?</a>
+            </div>
+        </form>
+
+        <form id="registerForm" style="display: none;">
+            <div class="form-group">
+                <i class="fas fa-user"></i>
+                <input type="text" id="registerUsername" placeholder="Username" required>
+            </div>
+            <div class="form-group">
+                <i class="fas fa-envelope"></i>
+                <input type="email" id="registerEmail" placeholder="Email" required>
+            </div>
+            <div class="form-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="registerPassword" placeholder="Password" required>
+            </div>
+            <div class="form-group">
+                <i class="fas fa-lock"></i>
+                <input type="password" id="registerConfirmPassword" placeholder="Confirm Password" required>
+            </div>
+            <div class="form-group">
+                <p id="password-strength"></p>
+            </div>
+            <button type="submit" class="submit-btn">Register</button>
+            <div class="form-footer">
+                By registering, you agree to our <a href="#">terms of use</a>
+            </div>
+        </form>
+    </div>
+
+    <div id="notifications" class="notifications"></div>
+
+    <script>
+        document.getElementById('loginTab').addEventListener('click', function() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('loginTab').classList.add('active');
+            document.getElementById('registerTab').classList.remove('active');
+        });
+
+        document.getElementById('registerTab').addEventListener('click', function() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            document.getElementById('registerTab').classList.add('active');
+            document.getElementById('loginTab').classList.remove('active');
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const username = document.getElementById('registerUsername').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+
+            if (password !== confirmPassword) {
+                showNotification('Passwords do not match', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        username, 
+                        email, 
+                        password, 
+                        confirmPassword
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showNotification('Registration successful!', 'success');
+                } else {
+                    showNotification(data.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Connection error', 'error');
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showNotification('Login successful! Redirecting to Main page in 5 seconds...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'Main.html'; 
+                    }, 5000);
+                } else {
+                    showNotification(data.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Connection error', 'error');
+            }
+        });
+
+        function showNotification(message, type = 'info', duration = 3000) {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `<p>${message}</p><span class="close-btn">&times;</span>`;
+            notification.style.opacity = 0;
+
+            document.getElementById('notifications').appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = 1;
+            }, 100);
+
+            setTimeout(() => {
+                notification.style.opacity = 0;
+                setTimeout(() => {
+                    notification.remove();
+                }, 500);
+            }, duration);
+
+            notification.querySelector('.close-btn').addEventListener('click', () => {
+                notification.style.opacity = 0;
+                setTimeout(() => {
+                    notification.remove();
+                }, 500);
+            });
+        }
+
+        function checkPasswordStrength(password) {
+            let strength = 0;
+            if (password.length >= 8) strength += 1;
+            if (password.match(/[a-z]/)) strength += 1;
+            if (password.match(/[A-Z]/)) strength += 1;
+            if (password.match(/[0-9]/)) strength += 1;
+            if (password.match(/[^A-Za-z0-9]/)) strength += 1;
+
+            const strengthText = [
+                'Very Weak',
+                'Weak',
+                'Medium',
+                'Strong',
+                'Very Strong'
+            ];
+
+            document.getElementById('password-strength').innerText = strengthText[strength] || 'Weak';
+        }
+    </script>
+</body>
+</html>
