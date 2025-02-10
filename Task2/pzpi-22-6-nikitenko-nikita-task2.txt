@@ -1,0 +1,271 @@
+﻿ЛАБОРАТОРНА РОБОТА №2. 
+
+ РОЗРОБКА БАЗИ ДАНИХ ДЛЯ СЕРВЕРНОЇ ЧАСТИНИ ПРОГРАМНОЇ СИСТЕМИ ТА ПРИКЛАДНОГО ПРОГРАМНОГО ІНТЕРФЕЙСУ (API).
+
+
+Підготував 
+ст. Нікітенко Н.Ю 
+гр. ПЗПІ-22-6 
+
+
+
+Перевірив роботу: 
+Сокорчук І.П 
+
+
+
+1. Текстовий опис інженерних рішень
+Архітектура та призначення серверної частини
+Серверна частина системи побудована на Node.js із застосуванням фреймворку Express і забезпечує наступні основні функції:
+* Обробка запитів від клієнтів:
+ Сервер приймає HTTP-запити від клієнтів (як від веб‑інтерфейсу, так і від IoT‑пристроїв) через визначені API‑ендпоінти. Ці запити включають аутентифікацію, отримання даних про катастрофи, події, дані сенсорів, адміністративні операції тощо.
+
+* Інтеграція з базою даних:
+ Використовуючи PostgreSQL із розширенням PostGIS для геопросторових операцій, сервер зберігає дані про користувачів, катастрофи, події, налаштування та історичні дані. Логіка взаємодії з БД реалізована у вигляді модульних функцій, які виконують SQL‑запити для читання, запису, оновлення та видалення даних.
+
+* Бізнес-логіка та обробка даних:
+ Основна бізнес-логіка включає агрегацію даних із зовнішніх API (USGS, EONET), фільтрацію за часовими та географічними параметрами, а також обчислення статистичних показників. Результати обробки надалі повертаються клієнтам або зберігаються для подальшої аналітики.
+
+* Безпека та адміністрування:
+ Аутентифікація користувачів здійснюється за допомогою JWT-токенів, а адміністративні маршрути захищені middleware‑функціями. Це дозволяє управляти ролями користувачів та налаштуваннями системи.
+
+
+
+
+
+
+
+Специфікація API для взаємодії серверної частини з клієнтами
+Нижче наведено приклад специфікації API (OpenAPI‑подібна форма) для основних функцій серверної частини:
+   * Аутентифікація та управління користувачами:
+
+POST /api/auth/register
+ Опис: Реєстрація нового користувача.
+Параметри (JSON):
+
+ {
+  "username": "string",
+  "email": "string",
+  "password": "string",
+  "confirmPassword": "string"
+}
+ Відповідь (JSON):
+
+ { "message": "Registration successful" }
+      * POST /api/auth/login
+ Опис: Аутентифікація користувача.
+Параметри (JSON):
+
+ {
+  "username": "string",
+  "password": "string"
+}
+ Відповідь (JSON):
+
+ {
+  "message": "Login successful",
+  "token": "JWT_TOKEN"
+}
+      * GET /api/admin/users
+ Опис: Отримання списку всіх користувачів (адміністративний доступ).
+Заголовок: Authorization: Bearer <token>
+Відповідь (JSON): Масив користувачів.
+
+         * Катастрофи та події:
+
+POST /api/disasters
+ Опис: Створення запису про нову катастрофу.
+Параметри (JSON):
+
+ {
+  "type": "string",
+  "magnitude": "number",
+  "lat": "number",
+  "lng": "number"
+}
+            *  Відповідь (JSON): Запис створеної катастрофи.
+
+            * GET /api/disasters?periodDays=3
+ Опис: Отримання списку катастроф за останні N днів.
+Відповідь (JSON): Масив катастроф.
+
+POST /api/events/fetch
+ Опис: Отримання подій із зовнішніх API та збереження їх у базі даних.
+Параметри (JSON):
+
+ { "periodDays": 3 }
+ Відповідь (JSON):
+
+ { "message": "Events fetched and stored", "count": "number" }
+
+
+               * Сенсори:
+
+                  * GET /api/sensors
+ Опис: Отримання даних про всі сенсори.
+Відповідь (JSON): Масив сенсорів.
+
+PUT /api/sensors/:sensorId
+ Опис: Оновлення показника конкретного сенсора.
+Параметри (JSON):
+
+ { "reading": "number" }
+                     *  Відповідь (JSON): Оновлений запис сенсора.
+
+                        * Налаштування користувача:
+
+PUT /api/users/:email
+ Опис: Оновлення налаштувань користувача.
+Параметри (JSON):
+ {
+  "seismic_threshold": "number",
+  "pressure_threshold": "number",
+  "water_threshold": "number"
+}
+                           *  Відповідь (JSON): Оновлені налаштування користувача.
+
+
+2. Фрагменти програмного коду
+2.1 Логіка взаємодії серверної частини з базою даних
+Нижче наведено фрагменти коду з файлу db.js, що реалізують взаємодію з PostgreSQL (включаючи геопросторові запити):
+// Функція для вставки запису про катастрофу
+const insertDisaster = async (type, magnitude, lat, lng) => {
+  return pool.query(
+    `INSERT INTO disasters (type, magnitude, location, timestamp)
+     VALUES ($1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326), NOW())
+     RETURNING *`,
+    [type, magnitude, lat, lng]
+  );
+};
+
+
+// Функція для отримання катастроф за останні N днів
+const getDisasters = (periodDays = 3) => {
+  return pool.query(
+    `SELECT *, ST_X(location::geometry) AS lng, ST_Y(location::geometry) AS lat 
+     FROM disasters 
+     WHERE timestamp > NOW() - INTERVAL '${periodDays} days'`
+  );
+};
+
+
+// Геопросторовий запит: отримання катастроф у заданому радіусі
+const getDisastersInRadius = (lat, lng, radius) =>
+  pool.query(
+    `SELECT *, ST_X(location::geometry) AS lng, ST_Y(location::geometry) AS lat 
+     FROM disasters 
+     WHERE ST_DWithin(location::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326), $3)`,
+    [lng, lat, radius]
+  );
+
+
+2.2 Логіка взаємодії серверної частини з клієнтами
+Нижче наведено фрагменти коду з файлів server.js та маршрутів (наприклад, routes/admin.js), що демонструють обробку HTTP‑запитів клієнтів:
+// server.js - основний вхідний файл сервера
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
+
+
+const app = express();
+app.use(express.json());
+app.use(cors());
+app.use(express.static(path.join(__dirname, 'public')));
+
+
+// Підключення роутерів
+const authRouter = require('./auth');
+const adminRouter = require('./routes/admin');
+const sensorsRouter = require('./routes/sensors');
+const disastersRouter = require('./routes/disasters');
+const eventsRouter = require('./routes/events');
+const usersRouter = require('./routes/users');
+
+
+app.use('/api/auth', authRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/sensors', sensorsRouter);
+app.use('/api/disasters', disastersRouter);
+app.use('/api/events', eventsRouter);
+app.use('/api/users', usersRouter);
+
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'Login.html'));
+});
+
+
+// Обробка 404 та помилок
+app.use((req, res) => {
+  res.status(404).send('Page not found');
+});
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something went wrong!');
+});
+
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+
+// routes/admin.js - приклад адміністративних маршрутів
+const express = require('express');
+const router = express.Router();
+const db = require('../db');
+const { authenticate } = require('../auth');
+
+
+// Отримання списку користувачів
+router.get('/users', authenticate, async (req, res) => {
+  try {
+    const users = await db.getUsers();
+    res.json(users.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+// Оновлення ролі користувача
+router.put('/user/:id/role', authenticate, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { role } = req.body;
+    await db.updateUserRole(userId, role);
+    res.json({ message: "User role updated successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+module.exports = router;
+
+
+________________
+
+
+3. Графічні ілюстрації
+3.1 UML діаграма прецедентів для серверної частини (PlantUML)
+  
+
+3.2 ER-діаграма (PlantUML)
+  
+
+3.3 Діаграма структури бази даних (PlantUML – класова діаграма)
+  
+
+________________
+
+
+Висновок
+Запропоноване рішення серверної частини системи забезпечує надійну взаємодію з клієнтами через чітко визначені API, ефективну логіку роботи з базою даних із підтримкою геопросторових операцій та масштабовану архітектуру. Наведені фрагменти коду демонструють основні аспекти інтеграції з БД та обробки запитів від клієнтів, а графічні UML та ER діаграми допомагають візуалізувати структуру системи, що сприяє подальшій розробці та підтримці GeoGuard Pro.
+
+
+Посилання на репозиторій GitHub: https://github.com/NureNikitenkoNikita/arkpz-pzpi-22-6-nikitenko-nikita
